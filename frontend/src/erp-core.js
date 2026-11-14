@@ -85,7 +85,7 @@ function convert(data,map,options={}){
   if(!Number.isFinite(revenue)||Math.abs(revenue)>1e14)reasons.push('Receita fora do limite.');
   if(reasons.length){errors.push({line:options.sourceLines?.[i]??i+(options.headerIndex||0)+2,reasons:reasons.join(' ')});continue;}
   const fingerprint=JSON.stringify(raw);if(seen.has(fingerprint)){duplicates++;if(options.removeDuplicates){removed++;continue;}}else seen.add(fingerprint);
-  const r={date,revenue,cost:numeric.cost===null?null:numeric.cost+(numeric.shipping||0),quantity:numeric.quantity,sourceLine:options.sourceLines?.[i]??i+(options.headerIndex||0)+2};
+  const r={date,revenue,cost:numeric.cost===null?null:numeric.cost+(numeric.shipping||0),refund:numeric.refund,quantity:numeric.quantity,sourceLine:options.sourceLines?.[i]??i+(options.headerIndex||0)+2};
   for(const k of ['order','customer','product','category','brand','store','state','channel','status','paymentMethod'])r[k]=String(get(k)??'').trim();
   if(r.cost===null)missingCosts++;valid.push(r);
  }
