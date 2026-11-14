@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ai-master-agent-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.3"
+      - key: CORS_ORIGINS
+        value: https://marcosfeitosa0408.github.io
+      - key: DB_PATH
+        value: data/app.db
+      # O Render gera o segredo, que NÃO pode ser enviado ao frontend React.
+      # Endpoints privados retornarão 401 sem autenticação.
+      - key: API_TOKEN
+        generateValue: true
