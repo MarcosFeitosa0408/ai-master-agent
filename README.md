@@ -1,5 +1,9 @@
 # AI MASTER AGENT
 
+**Acessar aplicativo publicado (Camada 1):** [AI MASTER AGENT — GitHub Pages](https://marcosfeitosa0408.github.io/ai-master-agent/)
+
+> Esta versão oferece planejamento por regras locais e análise CSV no navegador; integração Claude, GitHub App e execução remota seguem pendentes.
+
 Planejamento, desenvolvimento e execução inteligente. Frontend React (GitHub Pages) + backend FastAPI (Render).
 
 ## Estrutura
