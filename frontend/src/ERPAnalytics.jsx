@@ -36,6 +36,17 @@ export default function ERPAnalytics({onDataChange}){
   const [locale,setLocale]=useState("pt-BR"),[dateOrder,setDateOrder]=useState("DMY"),[revenueMode,setRevenueMode]=useState("net"),[removeDuplicates,setRemoveDuplicates]=useState(false);
   const [preview,setPreview]=useState(null),[filters,setFilters]=useState({});
   const prepared=useMemo(()=>{if(!grid)return null;try{return CORE.prepare(grid,headerRow-1);}catch{return null;}},[grid,headerRow]);
+  const columnProfile=useMemo(()=>{
+    if(!prepared)return [];
+    return prepared.headers.map((name,i)=>{
+      const values=prepared.data.map(row=>String(row[i]??"").trim());
+      const nonEmpty=values.filter(Boolean);
+      const numbers=nonEmpty.map(v=>CORE.parseNumber(v,locale));
+      const numeric=nonEmpty.length>0 && numbers.every(v=>v!==null);
+      const dates=nonEmpty.length>0 && nonEmpty.every(v=>CORE.parseDate(v,dateOrder)!==null);
+      return {name,missing:values.length-nonEmpty.length,distinct:new Set(nonEmpty).size,type:numeric?"numérico":dates?"data":"texto",min:numeric?Math.min(...numbers):null,max:numeric?Math.max(...numbers):null,mean:numeric?numbers.reduce((a,b)=>a+b,0)/numbers.length:null};
+    });
+  },[prepared,locale,dateOrder]);
   useEffect(()=>{loadBases().then(items=>{setBases(items);onDataChange?.(allRows(items));}).catch(e=>setError("Não foi possível carregar bases locais: "+e.message)).finally(()=>setLoading(false));},[]);
   async function updateList(items){setBases(items);onDataChange?.(allRows(items));}
   function newGrid(rows,name){
@@ -113,6 +124,7 @@ export default function ERPAnalytics({onDataChange}){
         <label>Interpretação da receita<select value={revenueMode} onChange={e=>setRevenueMode(e.target.value)}><option value="net">Valor já líquido: não descontar estornos</option><option value="gross">Valor bruto: descontar devoluções e estornos</option></select></label>
       </div>
       <p className="sub" style={{marginTop:10}}>Confira o mapeamento. Cada coluna deve representar apenas um campo. Custos e outras informações podem ficar não informados.</p>
+      {columnProfile.length>0&&<details open><summary><b>Qualidade por coluna — valores ausentes e estatísticas</b></summary><div className="tw"><table><thead><tr><th>Coluna</th><th>Tipo identificado</th><th>Ausentes</th><th>Distintos</th><th>Estatísticas numéricas</th></tr></thead><tbody>{columnProfile.map((col,i)=><tr key={i}><td>{col.name}</td><td>{col.type}</td><td>{integer(col.missing)}</td><td>{integer(col.distinct)}</td><td>{col.type==="numérico"?"mín "+integer(col.min)+" · máx "+integer(col.max)+" · média "+integer(col.mean):"—"}</td></tr>)}</tbody></table></div><p className="sub">Campos opcionais vazios podem ser normais, por exemplo Data_Estorno sem estorno. Confira os tipos inferidos.</p></details>}
       {prepared?<><div className="erp-fields">{fields.map(([key,label])=><label key={key}>{label}<select value={map[key]??""} onChange={e=>setMap(p=>({...p,[key]:e.target.value===""?undefined:Number(e.target.value)}))}><option value="">Não informado</option>{prepared.headers.map((name,i)=><option key={i} value={i} disabled={Object.entries(map).some(([k,v])=>k!==key&&v===i)}>{name}</option>)}</select></label>)}</div>
         <label className="erp-check"><input type="checkbox" checked={removeDuplicates} onChange={e=>setRemoveDuplicates(e.target.checked)}/> Remover cópias de linhas exatamente iguais, somente após confirmar</label>
         <p className="sub">Registros originais: {integer(prepared.data.length)}. Identificadores de pedido repetidos podem representar itens diferentes.</p>
