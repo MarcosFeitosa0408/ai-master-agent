@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, remote } from "./api";
 import { makePlan } from "./planner";
-import { analyzeCSV } from "./csv";
+import ERPAnalytics from "./ERPAnalytics.jsx";
+import {summarize, money} from "./analytics-engine.js";
 
 const MODS = [["geral", "▦ Visão Geral"], ["plano", "✦ Planejamento IA"], ["exec", "▶ Execução"], ["gh", "⑂ GitHub"], ["dev", "</> Desenvolvedor IA"], ["dados", "▤ Central de Dados"], ["hist", "◷ Histórico"]];
 const stamp = () => new Date().toLocaleString("pt-BR");
@@ -18,7 +19,7 @@ export default function App() {
   const [plan, setPlan] = useState(init.plan || null);
   const [hist, setHist] = useState(init.hist || []);
   const [open, setOpen] = useState({});
-  const [csv, setCsv] = useState(null);
+  const [businessRows, setBusinessRows] = useState([]);
   const [code, setCode] = useState("");
   const [info, setInfo] = useState("");
   const [integ, setInteg] = useState(null);
@@ -48,11 +49,6 @@ export default function App() {
     if (to) setPlan((p) => ({ ...p, steps: p.steps.map((x) => (x.n === s.n ? { ...x, status: to } : x)) }));
     addLog({ start: `Etapa ${s.n} iniciada (marcação manual; nenhuma operação externa executada): ${s.title}`, complete: `Etapa ${s.n} marcada como concluída por você`, help: `Ajuda solicitada na etapa ${s.n}: a IA ainda não está ligada (requer backend com chave Anthropic)`, verify: `Verificação da etapa ${s.n}: sem resultado automático. Status: ${s.status}` }[a]);
   });
-  const onFile = guard(async (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    if (remote) { const fd = new FormData(); fd.append("file", f); setCsv(await api("/api/data/analyze", { method: "POST", body: fd })); await refresh(); }
-    else { const r = analyzeCSV(await f.text()); setCsv(r); addLog(`CSV analisado: ${f.name} (${r.rows} linhas, ${r.duplicates} duplicadas)`); }
-  });
   const gh = integ?.github?.configured ? <Tag c="warn">GitHub: credenciais no servidor, integração ainda não implementada</Tag> : <Tag c="err">GitHub: não conectado</Tag>;
   const logs = hist.length ? hist.map((h, i) => <div key={i}>{h}</div>) : "Nenhuma atividade ainda.";
 
@@ -68,6 +64,7 @@ export default function App() {
           <Tag c={remote ? "ok" : "warn"}>{remote ? "Backend: URL configurada (acesso exige autenticação)" : "Backend: modo local (sem VITE_API_URL)"}</Tag>{gh}
           <Tag c="warn">IA (Claude): não implementada</Tag><Tag c="warn">Execução de código: indisponível</Tag><Tag c="ok">Planejamento: ativo</Tag><Tag c="ok">Análise de CSV: ativa</Tag></div></div>
         <div className="card"><h2>Atividades recentes</h2><div className="log">{hist.length ? hist.slice(0, 6).map((h, i) => <div key={i}>{h}</div>) : "Nenhuma atividade ainda."}</div></div>
+        {businessRows.length > 0 && <div className="card"><h2>Resumo empresarial — dados importados</h2><div className="grid"><div className="card kpi"><b>{money(summarize(businessRows).revenue)}</b><span>Receita / valor</span></div><div className="card kpi"><b>{money(summarize(businessRows).profit)}</b><span>Resultado (se custos completos)</span></div><div className="card kpi"><b>{businessRows.length}</b><span>Registros validados</span></div></div><p className="sub">Consulte a Central de Dados para filtros, gráficos, qualidade e exportação.</p></div>}
       </Sec>
       <Sec id="plano" tab={tab} title="Planejamento IA" sub="Informe um objetivo; o plano de 3 a 5 etapas é gerado por regras (não por IA) e você controla cada etapa.">
         <div className="card"><textarea style={{ minHeight: 70, fontFamily: "inherit" }} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ex.: Analise meu repositório e corrija os problemas encontrados" />
@@ -103,11 +100,8 @@ export default function App() {
           <p className="sub" style={{ margin: "8px 0 0" }}>{info}</p></div>
         <div className="card"><h2>Fluxo previsto antes de qualquer mudança</h2><p className="sub" style={{ margin: 0 }}>Problema identificado → correção proposta → arquivos afetados → riscos → sua autorização → branch → alterações → testes → pull request.</p></div>
       </Sec>
-      <Sec id="dados" tab={tab} title="Central de Dados" sub={remote ? "Envie um CSV: a análise roda no backend, sem inventar valores." : "Envie um CSV: a análise roda no seu navegador, sem inventar valores."}>
-        <div className="card"><input type="file" accept=".csv,.txt" onChange={onFile} /></div>
-        {csv && <><div className="grid">{[[csv.rows, "Linhas"], [csv.columns, "Colunas"], [csv.duplicates, "Linhas duplicadas"]].map(([v, l]) => <div className="card kpi" key={l}><b>{v}</b><span>{l}</span></div>)}</div>
-          <div className="card tw"><table><thead><tr><th>Coluna</th><th>Tipo</th><th>Ausentes</th><th>Estatísticas</th></tr></thead><tbody>
-            {csv.cols.map((c) => <tr key={c.name}><td>{c.name}</td><td>{c.type}</td><td>{c.missing}</td><td>{c.type === "numérico" ? `mín ${c.min} · máx ${c.max} · média ${c.mean} · mediana ${c.median}` : `${c.distinct} valores distintos`}</td></tr>)}</tbody></table></div></>}
+      <Sec id="dados" tab={tab} title="Central de Dados" sub="Análise de negócios completa, com o motor de validação do ERP Business Platform.">
+        <ERPAnalytics onDataChange={setBusinessRows}/>
       </Sec>
       <Sec id="hist" tab={tab} title="Histórico" sub={remote ? "Registro de ações salvo no banco do backend." : "Registro de ações salvo neste navegador."}>
         <div className="card"><div className="log">{logs}</div></div>

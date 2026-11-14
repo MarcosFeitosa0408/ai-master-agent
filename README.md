@@ -47,3 +47,16 @@ Regras: nada de chaves no frontend; exclusões e publicações só com confirma�
 - `GET /api/health` é público apenas para monitoramento; `GET /api/plans` exige autenticação. Não confunda a presença do Render com integração funcional no Artifact.
 - Um próximo módulo de login seguro (sessão/OAuth/PKCE conforme desenho do backend) será necessário para conectar o frontend à API na internet.
 - Não use `VITE_API_URL` para acesso administrativo direto e não armazene segredos no localStorage.
+
+
+## Central de Dados avançada — integração com ERP Business Platform
+
+A Central de Dados agora usa um motor derivado de MarcosFeitosa0408/erp-business-platform/import-core.js, mantendo o ERP original intocado. O frontend lê CSV, TSV, XLSX e XLS de até 20 MB; a biblioteca Excel está localmente em frontend/public/vendor/ com a licença preservada. Cada arquivo é lido no navegador; o mapeamento deve ser confirmado antes de calcular os KPIs.
+
+- Permite revisar formatos de datas e números, receita bruta/líquida, descontos, estornos, custos e frete.
+- Só remove duplicatas exatamente iguais com opção e confirmação explícitas. Rejeita datas e números inválidos e informa as linhas afetadas.
+- KPIs empresariais, filtros, evolução mensal, rankings por empresa, loja, canal, categoria, status e forma de pagamento, tabela e exportação CSV/Excel.
+- Guarda bases validadas no IndexedDB local e permite removê-las ou exportar backup JSON. Não mistura dados fictícios com reais.
+- Sem todos os custos, resultado e margem são indisponíveis. Resultado não equivale a lucro líquido contábil. Em pagamentos, confirme se Valor_Transacao é bruto ou líquido antes de descontar Valor_Estornado.
+- A Visão Geral apresenta resumo das bases, e os gráficos completos ficam na Central de Dados.
+- Claude e automações remotas do GitHub continuam pendentes. Não publique credenciais ou dados pessoais no repositório.
